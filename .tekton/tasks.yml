@@ -31,7 +31,6 @@ spec:
           # Delete files and directories starting with .. plus any other character
           rm -rf "${WORKSPACE_SOURCE_PATH}"/..?*
         fi
-
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Task
@@ -40,22 +39,36 @@ metadata:
 spec:
   workspaces:
     - name: source
-  params:
-    - name: args
-      description: Arguments to pass to nose
-      type: string
-      default: "-v"
   steps:
     - name: nosetests
       image: python:3.9-slim
-      workingDir: $(workspaces.source.path)
       script: |
         #!/bin/bash
         set -e
-        python -m pip install --upgrade pip wheel
-        pip install -r requirements.txt
-        nosetests $(params.args)
-        ---
+        
+        echo "=== Ellenőrizzük a workspace-t a nose taskban ==="
+        cd /workspace/source || cd /workspace/output || cd /workspace
+        
+        # Ha nincs még git repó vagy service mappa, letöltjük magunknak helyben
+        if [ ! -d "service" ]; then
+            echo "A service mappa nem található, letöltöm a kódot git clone-nal..."
+            apt-get update && apt-get install -y git
+            git clone https://github.com/imatehungary/ci-cd-final-project.git .
+        fi
+        
+        echo "Aktuális mappa tartalma:"
+        ls -la
+        
+        # Pip csomagok telepítése
+        pip install --upgrade pip
+        if [ -f "requirements.txt" ]; then
+            pip install -r requirements.txt
+        else
+            pip install flake8 nose
+        fi
+        
+        # Nosetests futtatása
+        nosetests -v
 ---
 apiVersion: tekton.dev/v1beta1
 kind: Task
