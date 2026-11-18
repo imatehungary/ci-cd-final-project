@@ -67,7 +67,7 @@ spec:
   steps:
     - name: lint
       image: python:3.9-slim
-      workingDir: $(workspaces.outputh.path)
+      workingDir: $(workspaces.output.path)
       script: |
         #!/bin/bash
         set -e
