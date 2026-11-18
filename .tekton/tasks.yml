@@ -71,13 +71,21 @@ spec:
         #!/bin/bash
         set -e
         
-        echo "=== Mappa tartalma a /workspace/output-ban ==="
-        ls -la /workspace/output
+        echo "=== Ellenőrizzük az egész /workspace könyvtárat ==="
+        find /workspace -maxdepth 3 -ls
         
-        # Belépünk közvetlenül a klónozott kód mappájába
+        # Ha a /workspace/output üres, klónozzuk le közvetlenül itt is biztos ami biztos alapon!
         cd /workspace/output
+        if [ ! -d ".git" ] && [ ! -d "service" ]; then
+            echo "A mappa üres, letöltöm a kódot git clone-nal..."
+            apt-get update && apt-get install -y git
+            git clone https://github.com/imatehungary/ci-cd-final-project.git .
+        fi
         
-        # Csomagok telepítése
+        echo "Aktuális mappa tartalma:"
+        ls -la
+        
+        # Python csomagok telepítése
         pip install --upgrade pip
         if [ -f "requirements.txt" ]; then
             pip install -r requirements.txt
@@ -85,12 +93,6 @@ spec:
             pip install flake8 nose
         fi
         
-        # Flake8 futtatása a service mappán
-        if [ -d "service" ]; then
-            flake8 service --count --select=E9,F63,F7,F82 --show-source --statistics
-            flake8 service --count --max-complexity=10 --max-line-length=127 --statistics
-        else
-            echo "Hiba: A 'service' mappa nem található itt: $(pwd)"
-            ls -la
-            exit 1
-        fi
+        # Flake8 futtatása
+        flake8 service --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 service --count --max-complexity=10 --max-line-length=127 --statistics
