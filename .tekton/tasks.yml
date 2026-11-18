@@ -71,36 +71,26 @@ spec:
         #!/bin/bash
         set -e
         
-        echo "=== Keresem a projekt fájljait a workspace-ben ==/="
-        find /workspace -maxdepth 3 -ls
+        echo "=== Mappa tartalma a /workspace/output-ban ==="
+        ls -la /workspace/output
         
-        # Megkeressük, hol van a requirements.txt
-        PROJECT_DIR=$(dirname "$(find /workspace -name "requirements.txt" | head -n 1)")
+        # Belépünk közvetlenül a klónozott kód mappájába
+        cd /workspace/output
         
-        if [ "$PROJECT_DIR" != "." ] && [ -d "$PROJECT_DIR" ]; then
-            echo "A projekt mappa megtalálva itt: $PROJECT_DIR"
-            cd "$PROJECT_DIR"
-        else
-            echo "Nem találtam a projekt mappát, belépek a /workspace/output-ba..."
-            cd /workspace/output || cd /workspace
-        fi
-
-        echo "Aktuális mappa: $(pwd)"
-        ls -la
-
-        # Python csomagok telepítése
+        # Csomagok telepítése
         pip install --upgrade pip
         if [ -f "requirements.txt" ]; then
             pip install -r requirements.txt
         else
             pip install flake8 nose
         fi
-
-        # Flake8 futtatása a service mappán (ha létezik, ha nem, létrehozzuk vagy keressük)
+        
+        # Flake8 futtatása a service mappán
         if [ -d "service" ]; then
             flake8 service --count --select=E9,F63,F7,F82 --show-source --statistics
             flake8 service --count --max-complexity=10 --max-line-length=127 --statistics
         else
-            echo "Figyelem: A 'service' mappa nem található a gyökérben, de a teszt továbbmehet."
-            find . -maxdepth 2 -name "*.py"
+            echo "Hiba: A 'service' mappa nem található itt: $(pwd)"
+            ls -la
+            exit 1
         fi
