@@ -1,8 +1,10 @@
+---
 apiVersion: tekton.dev/v1beta1
 kind: Task
 metadata:
   name: cleanup
 spec:
+  description: This task will clean up a workspace by deleting all the files.
   workspaces:
     - name: source
   steps:
@@ -31,81 +33,3 @@ spec:
           # Delete files and directories starting with .. plus any other character
           rm -rf "${WORKSPACE_SOURCE_PATH}"/..?*
         fi
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: nose
-spec:
-  workspaces:
-    - name: source
-  steps:
-    - name: nosetests
-      image: python:3.9-slim
-      script: |
-        #!/bin/bash
-        set -e
-        
-        echo "=== Ellenőrizzük a workspace-t a nose taskban ==="
-        cd /workspace/source || cd /workspace/output || cd /workspace
-        
-        # Ha nincs még git repó vagy service mappa, letöltjük magunknak helyben
-        if [ ! -d "service" ]; then
-            echo "A service mappa nem található, letöltöm a kódot git clone-nal..."
-            apt-get update && apt-get install -y git
-            git clone https://github.com/imatehungary/ci-cd-final-project.git .
-        fi
-        
-        echo "Aktuális mappa tartalma:"
-        ls -la
-        
-        # Pip csomagok telepítése
-        pip install --upgrade pip
-        if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-        else
-            pip install flake8 nose
-        fi
-        
-        # Nosetests futtatása
-        nosetests -v
----
-apiVersion: tekton.dev/v1beta1
-kind: Task
-metadata:
-  name: flake8
-spec:
-  workspaces:
-    - name: output
-  steps:
-    - name: lint
-      image: python:3.9-slim
-      script: |
-        #!/bin/bash
-        set -e
-        
-        echo "=== Ellenőrizzük az egész /workspace könyvtárat ==="
-        find /workspace -maxdepth 3 -ls
-        
-        # Ha a /workspace/output üres, klónozzuk le közvetlenül itt is biztos ami biztos alapon!
-        cd /workspace/output
-        if [ ! -d ".git" ] && [ ! -d "service" ]; then
-            echo "A mappa üres, letöltöm a kódot git clone-nal..."
-            apt-get update && apt-get install -y git
-            git clone https://github.com/imatehungary/ci-cd-final-project.git .
-        fi
-        
-        echo "Aktuális mappa tartalma:"
-        ls -la
-        
-        # Python csomagok telepítése
-        pip install --upgrade pip
-        if [ -f "requirements.txt" ]; then
-            pip install -r requirements.txt
-        else
-            pip install flake8 nose
-        fi
-        
-        # Flake8 futtatása
-        flake8 service --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 service --count --max-complexity=10 --max-line-length=127 --statistics
